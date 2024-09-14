@@ -1,0 +1,316 @@
+---
+title: "QMM Assignment 8"
+author: "Chnadra Sekhar Byragani"
+date: "2023-10-29"
+output: html_document
+---
+Chandra Sekharz
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(Benchmarking)
+library(lpSolveAPI)
+library(ucminf)
+library(quadprog)
+```
+###Question:The Hope Valley Health Care Association owns and operates six nursing homes in adjoining
+states. An evaluation of their efficiency has been undertaken using two inputs and two outputs.
+The inputs are staffing labor (measured in average hours per day) and the cost of supplies (in
+thousands of dollars per day). The outputs are the number of patient-days reimbursed by third-
+party sources and the number of patient-days reimbursed privately. A summary of performance
+data is shown in the table below:
+```{r}
+x <- matrix(c(100, 300, 320, 500, 350, 340, 0.3, 0.6, 1.2, 2.0, 1.4, 0.7), ncol = 2)
+y <- matrix(c(15000,15000,40000,28000,20000,14000,3500,20000,11000,42000,25000,15000),ncol = 2)
+colnames(y) <- c("Reimbursed Patient_Days","Privately Paid Patient_Days")
+colnames(x) <- c("Staff_Hours", "Supplies")
+Table<- cbind(x,y)
+row.names(Table) = c("Fac1", "Fac2", "Fac3", "Fac4", "Fac5", "Fac6")
+Table
+```
+
+#DEA Analysis under all DEA assumptions (FDH, CRS, VRS, IRS, DRS, and FRH)
+```{r}
+CRS <- dea(x,y, RTS = "crs") 
+print(CRS)
+```
+*Efficiency scores closer to 1 indicate higher efficiency, while scores closer to 0 denote lower efficiency.
+*In this case, facilities 1, 2, and 4 have an efficiency score of 1, signifying that they are fully efficient under the CRS assumption.
+*Facilities 3 and 5 have efficiency scores of 0.8793 and 0.8942, respectively, indicating slightly lower efficiency than the fully efficient facilities.
+*Facility 6 has the lowest efficiency score of 0.7048, suggesting it is the least efficient among the analyzed facilities under the CRS assumption.
+#CRS - Facilities 1,2,3,4 are efficient whereas facilities 5,6 have efficiency rates of 98% and 87% respectively.
+```{r}
+peers(CRS)
+```
+*Facility 1 is the peer for itself (1), and no other facility is listed as a peer.
+*Facility 2 is also a peer to itself (2), and similarly, no other facility is listed as a peer.
+*Facility 3 is peer to Facility 1 (1) and Facility 4 (4).
+*Facility 4 is a peer to itself (4), and no other facility is listed as a peer.
+*Facility 5 is a peer to Facility 1 (1) and Facility 4 (4).
+*Facility 6 is a peer to Facility 1 (1) and Facility 2 (2).
+
+This peer relationship information reveals which facilities are associated as peers based on their efficiency scores under the CRS assumption. Peers are the units that achieve similar levels of efficiency or have similar input-output patterns. For instance, facilities 1 and 2 are peers to Facility 6, suggesting they share certain similarities in their efficiency or resource usage patterns when evaluated under the CRS assumption.
+```{r}
+CRS_Weights <- lambda(CRS) 
+CRS_Weights
+```
+*For each facility, the row represents the proportion of each input used in producing the output, denoted by 'L1' for Staff Hours, 'L2' for Supplies, and 'L4' for the Interception (Intercept/Constant term).
+*The values in the matrix indicate the weight given to each input for the efficiency evaluation of the respective facility.
+*Facility 1 and Facility 2 primarily utilize only one input each (Staff Hours and Supplies, respectively) to achieve efficiency, with no use of the constant term (Interception).
+*Facility 3 seems to rely more on Staff Hours (~72.5%) and slightly on the Interception (~2.5%), while Facility 4 only seems to utilize the Interception (100%).
+*Facility 5 shows a moderate reliance on the Interception (~57.3%) and some usage of Staff Hours (~26.3%).
+*Facility 6 relies more on Supplies (~71.1%) and Staff Hours (~22.2%), without any reliance on the Interception.
+
+These weight distributions help understand the relative significance of each input in the efficient operation of each facility according to the CRS assumption in the DEA context.
+
+#The weights for facility 5 are 0.20, 0.08, 0.54. The weights for facility 6 are 0.34, 0.39, 0.13
+```{r}
+FDH <- dea(x,y, RTS= "fdh")
+FDH #all facilities are efficient
+```
+*The efficiency scores range from 0 to 1, where 1 indicates full efficiency and 0 denotes inefficiency.
+*In this context, all facilities (Fac1 to Fac6) are considered efficient under the Free Disposal Hull (FDH) assumption, with efficiency scores of 1, except for Facility 6, which has an efficiency score of 0.8824. This score suggests that Facility 6 is slightly less efficient compared to the other facilities under the FDH assumption.
+
+The Free Disposal Hull (FDH) assumes that facilities can dispose of any level of inputs and outputs, which often results in more facilities being deemed efficient compared to other DEA models. In this case, all facilities are efficient except for Facility 6, which is slightly less efficient under the FDH assumption.
+
+
+#peers(FDH) #the peer for each facility is itself
+```{r}
+FDH_Weights <- lambda(FDH)
+FDH_Weights
+```
+*Each row in the matrix represents a facility, while each column signifies an input or output factor.
+*The values in the matrix indicate the weight given to each input for the efficiency evaluation of the respective facility under the Free Disposal Hull (FDH) assumption.
+*Facilities 1, 3, 4, and 5 predominantly utilize only one input/output factor each to achieve efficiency, while Facility 2 primarily utilizes the "Supplies" input factor.
+*Facility 6, similar to Facility 2, mainly relies on the "Supplies" input factor.
+
+The "peers(FDH)" function was commented out, but the provided weight matrix shows the weight distribution for each facility under the FDH assumption. The weights reflect the relative importance of each input in the efficiency evaluation of the respective facility under the Free Disposal Hull (FDH) assumption in DEA.
+
+```{r}
+VRS <- dea(x,y, RTS = "vrs")
+VRS #All facilities are efficient except for facility 6
+```
+*An efficiency score of 1 indicates full efficiency, while scores closer to 0 denote inefficiency.
+*In this context, facilities 1, 2, 3, and 4 have an efficiency score of 1, indicating that they are fully efficient under the Variable Returns to Scale (VRS) assumption.
+*Facility 5 has an efficiency score of 0.9239, suggesting it is slightly less efficient compared to fully efficient facilities.
+*Facility 6 has the lowest efficiency score of 0.7273, indicating it is the least efficient among the analyzed facilities under the VRS assumption.
+
+This analysis under the VRS assumption helps to understand how efficient each facility is when considering varying returns to scale, revealing varying degrees of efficiency among the facilities.
+
+
+```{r}
+peers(VRS) #peers for facility 6 are 1,2,5
+```
+*Facility 6 (row 6) is associated with three peer facilities: 1, 2, and 5.
+*The table indicates that Facility 6 shares certain similarities or characteristics in terms of their efficiency or resource usage patterns with Facilities 1, 2, and 5 under the VRS assumption.
+*The lack of a peer2 value for Facilities 1, 2, 3, and 4 suggests they don't have secondary peers or do not share the same efficiency patterns with other facilities.
+
+This peer relationship information helps identify which facilities exhibit similar efficiency characteristics under the VRS assumption. In this case, Facility 6 is associated with Facilities 1, 2, and 5, indicating similarities in their efficiency or resource utilization patterns within the Variable Returns to Scale context.
+
+```{r}
+VRS_Weights <- lambda(VRS)
+VRS_Weights
+```
+*The matrix indicates the weight distribution of each input (L1 for Staff Hours, L2 for Supplies, L3 for another input, and L4 for any constant/interception) in determining the efficiency of each facility under the Variable Returns to Scale (VRS) assumption.
+*Facilities 1, 2, 3, and 4 are completely specialized in one specific input, meaning they achieve efficiency by predominantly using only one input each.
+*Facility 5 utilizes a mix of Staff Hours (~44.2%) and the "Others" input (~55.8%) to attain its efficiency.
+*Facility 6 primarily relies on Supplies (~69.7%) while also using a notable portion of Staff Hours (~30.3%) for its efficiency score, without any consideration of the "Others" input.
+
+These weight distributions showcase the relative importance of different inputs in driving the efficiency scores of the respective facilities under the Variable Returns to Scale (VRS) assumption within the DEA framework.
+
+```{r}
+IRS <- dea(x,y, RTS= "irs")
+IRS #All facilities are efficient except for facility
+```
+*An efficiency score of 1 denotes full efficiency, while scores approaching 0 indicate inefficiency.
+*Facilities 1, 2, 4 have an efficiency score of 1, indicating they are fully efficient under the Increasing Returns to Scale (IRS) assumption.
+*Facility 3 has an efficiency score of 0.8793, implying it is less efficient compared to fully efficient facilities.
+*Facilities 5 and 6 have the lowest efficiency scores, with Facility 5 at 0.9239 and Facility 6 at 0.7273, making them the least efficient among the analyzed facilities under the IRS assumption.
+
+This analysis under the IRS assumption provides insights into the varying degrees of efficiency across the facilities when considering increasing returns to scale.
+
+
+```{r}
+peers(IRS)
+```
+*Facility 6 (row 6) is associated with three peer facilities: 1, 2, and 4.
+*The table suggests that Facility 6 shares certain similarities or characteristics in terms of their efficiency or resource usage patterns with Facilities 1, 2, and 4 under the IRS assumption.
+*Facility 6 doesn't have a peer2 value for Facilities 1, 2, and 4, suggesting it doesn't have secondary peers or doesn't share the same efficiency patterns with other facilities.
+
+This peer relationship information helps identify which facilities exhibit similar efficiency characteristics under the Increasing Returns to Scale (IRS) assumption. In this case, Facility 6 is associated with Facilities 1, 2, and 4, indicating similarities in their efficiency or resource utilization patterns within the context of IRS assumption.
+
+
+```{r}
+IRS_Weights <- lambda(IRS)
+IRS_Weights
+```
+*The matrix shows the weight distribution of each input (L1 for Staff Hours, L2 for Supplies, and L4 for any constant/interception) in determining the efficiency of each facility under the Increasing Returns to Scale (IRS) assumption.
+*Facilities 1 and 2 are fully specialized in one specific input, achieving efficiency by predominantly using only one input each.
+*Facility 3 seems to require an unusual weight distribution with over 100% weight on the Staff Hours and a small fraction dedicated to another input (Others). This might indicate a high level of resource utilization or some anomalies in the analysis.
+*Facilities 4, 5, and 6 showcase more balanced usage of Staff Hours and Supplies to attain their respective efficiency scores under the IRS assumption.
+
+These weight distributions indicate the relative importance of different inputs in driving the efficiency scores of the facilities under the Increasing Returns to Scale (IRS) assumption within the DEA framework.
+
+
+```{r}
+DRS <- dea(x,y, RTS= "drs") 
+DRS #All facilities are efficient except for facility 5,6
+```
+Facilities 1, 2, 3, and 4 have efficiency scores of 1.0000, denoting that they are fully efficient under the Decreasing Returns to Scale (DRS) assumption.
+Facility 5 has an efficiency score of 0.8942, implying it is less efficient compared to the fully efficient facilities.
+Facility 6 has the lowest efficiency score, 0.7048, indicating it is the least efficient among the analyzed facilities under the DRS assumption.
+This analysis provides insights into the varying degrees of efficiency across the facilities when considering decreasing returns to scale. Facilities 5 and 6 are identified as less efficient under this particular assumption.
+
+```{r}
+peers(DRS) # The peers units for for facilities 5,6 are 1,2,4
+```
+Facility 5 is associated with two peer facilities: 1 and 4.
+Facility 6 is associated with two peer facilities: 1 and 2.
+These peer relationships suggest that Facilities 5 and 6 share certain similarities or characteristics in terms of their efficiency or resource usage patterns with Facilities 1, 2, and 4 under the DRS assumption in the DEA analysis.
+These peer relationships allow for the identification of facilities that exhibit similar efficiency characteristics or resource utilization patterns within the context of decreasing returns to scale assumption. In this case, Facilities 5 and 6 share efficiency similarities with Facilities 1, 2, and 4 under the DRS assumption.
+
+
+```{r}
+DRS_Weights <- lambda(DRS)
+DRS_Weights
+```
+The matrix shows the weight distribution of each input (L1 for Staff Hours, L2 for Supplies, L3 for any constant/interception, and L4 for any other input) in determining the efficiency of each facility under the Decreasing Returns to Scale (DRS) assumption.
+Facilities 1, 2, 3, and 4 are fully specialized in one specific input, achieving efficiency by predominantly using only one input each.
+Facilities 5 and 6 showcase more balanced usage of Staff Hours and Supplies to attain their respective efficiency scores under the DRS assumption.
+These weight distributions indicate the relative importance of different inputs in driving the efficiency scores of the facilities under the Decreasing Returns to Scale (DRS) assumption within the DEA framework.
+
+
+```{r}
+FRH <- dea(x,y, RTS= "add")
+FRH #all facilities are efficient
+```
+The results indicate the efficiency scores under the Free Disposal Hull (FRH) assumption.
+Facilities 1, 2, 3, and 4 have an efficiency score of 1.0000, suggesting that they are fully efficient under the FRH assumption.
+Facility 5 has an efficiency score of 1.0000, denoting full efficiency as well.
+Facility 6 has an efficiency score of 0.8824, implying that it is less efficient compared to the fully efficient facilities.
+In summary, facilities 1 through 5 are considered fully efficient under the Free Disposal Hull (FRH) assumption. Facility 6, however, is relatively less efficient compared to the others according to this particular analysis.
+
+```{r}
+peers(FRH) #the peer unit for each facility is itself
+```
+In the context of the Free Disposal Hull (FRH) assumption:
+
+The output indicates that each facility is considered its own peer (except Facility 6, which is paired with Facility 2 as its peer).
+Facilities 1, 2, 3, and 4 are independent peers, as their peer units are the respective facilities themselves.
+Facility 5 is also considered its own peer, denoted by the value "5".
+Facility 6 is paired with Facility 2, suggesting some similarity or likeness in their efficiency characteristics under the FRH assumption.
+The peer relationships in the FRH assumption suggest that most facilities stand alone as peers, except Facility 6, which shares some efficiency characteristics with Facility 2 according to this analysis.
+
+```{r}
+FRH_Weights <- lambda(FRH)
+FRH_Weights
+```
+The weights matrix showcases the allocation of coefficients corresponding to various inputs and outputs for each facility. In this context:
+
+Each row corresponds to a specific facility.
+Each column represents the weight associated with a particular input/output.
+For example:
+
+Facility 1 has weights (1, 0, 0, 0, 0), signifying complete reliance on the first input/output and no contribution from the rest in the analysis.
+Facility 2 has weights (0, 1, 0, 0, 0), indicating sole reliance on the second input/output.
+The pattern continues similarly for other facilities.
+These weights detail how much each facility relies on different factors (inputs/outputs) based on the Free Disposal Hull (FRH) assumption.
+
+
+```{r}
+as.data.frame(Table)
+```
+```
+Facility 1:
+
+Staff Hours: 100
+Supplies: 0.3
+Reimbursed Patient Days: 15000
+Privately Paid Patient Days: 3500
+Facility 2:
+
+Staff Hours: 300
+Supplies: 0.6
+Reimbursed Patient Days: 15000
+Privately Paid Patient Days: 20000
+Facility 3:
+
+Staff Hours: 320
+Supplies: 1.2
+Reimbursed Patient Days: 40000
+Privately Paid Patient Days: 11000
+Facility 4:
+
+Staff Hours: 500
+Supplies: 2.0
+Reimbursed Patient Days: 28000
+Privately Paid Patient Days: 42000
+Facility 5:
+
+Staff Hours: 350
+Supplies: 1.4
+Reimbursed Patient Days: 20000
+Privately Paid Patient Days: 25000
+Facility 6:
+
+Staff Hours: 340
+Supplies: 0.7
+Reimbursed Patient Days: 14000
+Privately Paid Patient Days: 15000
+Each facility is represented by its respective row in the dataset, and the columns detail the quantitative attributes associated with these facilities such as staff hours, supplies, and patient days (reimbursed and privately paid).
+
+
+
+
+#3. Summarize your results in a tabular format
+```{r}
+df<-data.frame (CRS = c(1.0000, 1.0000, 1.0000, 1.0000, 0.9775, 0.8675),
+FDH= c(1,1,1,1,1,1), VRS= c(1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 0.8963),IRS =c( 1.0000, 1.0000, 1.0000, 1.0000, 1.0000 ,0.8963), DRS= c(1.0000 ,1.0000 ,1.0000, 1.0000, 0.9775, 0.8675), FRH= c(1,1,1,1,1,1))
+df
+```
+"CRS" represents results under the Constant Returns to Scale (CRS) assumption.
+"FDH" represents results under the Free Disposal Hull (FDH) assumption.
+"VRS" represents results under the Variable Returns to Scale (VRS) assumption.
+"IRS" represents results under the Increasing Returns to Scale (IRS) assumption.
+"DRS" represents results under the Decreasing Returns to Scale (DRS) assumption.
+"FRH" represents results under the Free Input-Oriented Hull (FRH) assumption.
+The table shows the efficiency scores for each facility under each assumption, with 1.0000 indicating efficiency and values less than 1 indicating inefficiency. Facility 5 and Facility 6 exhibit some level of inefficiency in certain DEA assumptions, as evident from the values below 1 in these rows.
+
+
+
+#The efficiency results at each facility in every DEA assumption
+
+#Observation - CRS and DRS give same results, FDH and FRH gave same results, and finally both VRS and IRS gave same results as well.
+```{r}
+results <- cbind(Table, df)
+results[,-c(1:4)]
+```
+Facilities 1 to 4 are considered efficient in all DEA assumptions.
+Facility 5 shows some level of inefficiency in CRS and DRS, and a minor inefficiency in VRS and IRS.
+Facility 6 demonstrates inefficiency in all DEA assumptions except for FRH.
+There are similarities between the following pairs of assumptions in their efficiency outcomes:
+
+CRS and DRS produce the same results.
+FDH and FRH exhibit the same results.
+VRS and IRS yield identical results.
+
+#Summary of the weights assigned to each Facility in every DEA assumption
+```{r}
+Weights_tbl <- cbind(FDH_Weights, CRS_Weights, VRS_Weights, IRS_Weights, DRS_Weights, FRH_Weights)
+row.names(Weights_tbl) <-   c("Fac1", "Fac2", "Fac3", "Fac4", "Fac5", "Fac6")
+colnames(Weights_tbl) <- c("FDH" ,"FDH", "FDH", "FDH","FDH", "CRS", "CRS", "CRS", "VRS", "VRS", "VRS","VRS", "IRS", "IRS", "IRS", "DRS", "DRS", "DRS", "DRS", "FRH", "FRH", "FRH", "FRH", "FRH") 
+as.data.frame(Weights_tbl)   
+
+```
+
+#The above table summarizes the weights for each facility under each DEA assumption
+
+Summary for Q1
+Under FDH and FRH all facilities are efficient,
+Under CRS and DRS all facilities were efficient except for Facility 5,6.
+Under VRS and IRS assumptions all except for facility 6 were efficient.
+The peer units for efficient facilities are themselves.
+Under VRS and IRS assumption the peers unit for inefficient facilities were 1,2 and 5.
+Under CRS and DRS, the peers unites were 1,2,and 4.
